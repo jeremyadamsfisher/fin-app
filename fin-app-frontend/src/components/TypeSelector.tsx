@@ -11,7 +11,7 @@ const titleCase = (s: string) =>
     .map((slice) => slice.charAt(0).toUpperCase() + slice.slice(1))
     .join(" ");
 
-const placeholder = "Select a category...";
+const placeholder = "Select type...";
 
 export function TypeSelector({ transaction }: { transaction: ITransaction }) {
   const updateTransaction = useUpdateTransaction();

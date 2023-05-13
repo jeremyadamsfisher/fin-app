@@ -1,5 +1,3 @@
-"use client";
-
 import { Button, Flex, Spacer, Box, Text } from "@chakra-ui/react";
 import FileUploader from "../components/StatementUploader";
 import Transactions from "../components/TransactionsTable";
