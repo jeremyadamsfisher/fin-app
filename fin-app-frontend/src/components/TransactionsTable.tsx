@@ -21,21 +21,19 @@ function dateTimeFormatter(dateStr: string) {
   });
 }
 
-export default function Transactions() {
+export default function TransactionTable() {
   const { transactions, loading } = useTransactions();
-
   if (loading) return <C.Spinner />;
-
-  return <CTable data={transactions} />;
+  // React Table cannot be defined in the root component
+  return <TTable data={transactions} />;
 }
 
-function CTable({ data }: { data: ITransaction[] }) {
+function TTable({ data }: { data: ITransaction[] }) {
   const columns = useMemo<Column<ITransaction>[]>(
     () => [
       {
         Header: "Date",
-        accessor: "date",
-        Cell: ({ value }) => <C.Text> {dateTimeFormatter(value)} </C.Text>,
+        Cell: ({ value: date }) => <C.Text> {dateTimeFormatter(date)} </C.Text>,
       },
       {
         Header: "Description",
@@ -43,19 +41,16 @@ function CTable({ data }: { data: ITransaction[] }) {
       },
       {
         Header: "Amount",
-        accessor: "amount",
         Cell: ({ value: amount }) => (
           <C.Text> {currencyFormatter.format(amount)} </C.Text>
         ),
       },
       {
-        Header: "Tags",
-        accessor: "tags",
+        Header: "Type",
         Cell: ({ row }) => <TypeSelector transaction={row.original} />,
       },
       {
         Header: "Notes",
-        accessor: "notes",
         Cell: ({ row }) => <Notes transaction={row.original} />,
       },
     ],

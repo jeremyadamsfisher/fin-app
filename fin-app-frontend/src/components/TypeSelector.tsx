@@ -1,7 +1,7 @@
 import type { ITransaction } from "@/lib/backend";
 import { Select } from "@chakra-ui/react";
 import { transactionTypes } from "@/lib/backend";
-import { useCallback, useState } from "react";
+import { useCallback } from "react";
 import { useUpdateTransaction } from "@/lib/backend";
 import { ChangeEvent } from "react";
 

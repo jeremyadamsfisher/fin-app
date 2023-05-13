@@ -1,6 +1,6 @@
 import { Button, Flex, Spacer, Box, Text } from "@chakra-ui/react";
 import FileUploader from "../components/StatementUploader";
-import Transactions from "../components/TransactionsTable";
+import TransactionTable from "../components/TransactionsTable";
 import { BiLogOut } from "react-icons/bi";
 
 export default function Home() {
@@ -25,7 +25,7 @@ export default function Home() {
         </Flex>
       </Box>
       <Box w={"80%"} p={5}>
-        <Transactions />
+        <TransactionTable />
       </Box>
     </Flex>
   );
