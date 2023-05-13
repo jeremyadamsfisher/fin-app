@@ -49,7 +49,7 @@ export interface ITransaction extends Record {
   updated: string;
   description: string;
   date: string;
-  type: TransactionType[];
+  type: TransactionType;
   amount: number;
   notes?: string;
 }
@@ -61,7 +61,7 @@ export type ITransactionUpdate = Omit<
 
 function useRealtimePocketbaseCollection<T extends Record>(
   collectionName: string,
-  collectionOrder: (a: T, b: T) => number
+  collectionOrder?: (a: T, b: T) => number
 ): {
   records: T[];
   loading: boolean;
@@ -103,13 +103,16 @@ function useRealtimePocketbaseCollection<T extends Record>(
       }
     });
     return () => {
-      collectionRef.unsubscribe();
+      collectionRef.unsubscribe("*");
     };
-  }, [recordsUnsorted, setRecordsUnsorted]);
+  }, [recordsUnsorted, setRecordsUnsorted, pbClient]);
 
   // re-sort to keep a consistent order
   const records = useMemo(
-    () => [...recordsUnsorted.sort(collectionOrder)],
+    () =>
+      collectionOrder
+        ? [...recordsUnsorted.sort(collectionOrder)]
+        : recordsUnsorted,
     [recordsUnsorted, collectionOrder]
   );
 
