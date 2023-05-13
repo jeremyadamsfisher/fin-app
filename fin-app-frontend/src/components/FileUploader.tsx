@@ -1,6 +1,6 @@
 "use client";
 
-import { IconButton, Flex, Button, Center, Text } from "@chakra-ui/react";
+import * as C from "@chakra-ui/react";
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
 import { IoMdCloseCircle } from "react-icons/io";
@@ -24,8 +24,8 @@ export default function FileUploader() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({ onDrop });
   return (
-    <Flex direction={"column"} gap={2} flexWrap={"wrap"}>
-      <Center
+    <C.Flex direction={"column"} gap={2} flexWrap={"wrap"}>
+      <C.Center
         w={"100%"}
         h={csvs.length > 0 ? "auto" : 200}
         borderWidth={3}
@@ -35,10 +35,10 @@ export default function FileUploader() {
         {...(csvs.length === 0 && getRootProps())}
       >
         <input {...getInputProps()} />
-        {csvs ? (
-          <Flex p={5} gap={5} wrap={"wrap"} justifyContent={"center"}>
+        {csvs.length > 0 ? (
+          <C.Flex p={5} gap={5} wrap={"wrap"} justifyContent={"center"}>
             {csvs.map((file, i) => (
-              <Center
+              <C.Center
                 key={file.name}
                 bg={"gray.700"}
                 rounded={"md"}
@@ -48,8 +48,8 @@ export default function FileUploader() {
                 px={5}
                 pos="relative"
               >
-                <Text fontWeight={"semibold"}>{file.name}</Text>
-                <IconButton
+                <C.Text fontWeight={"semibold"}>{file.name}</C.Text>
+                <C.IconButton
                   icon={<IoMdCloseCircle />}
                   variant={"ghost"}
                   size={"sm"}
@@ -59,16 +59,22 @@ export default function FileUploader() {
                   right={-1}
                   onClick={() => setCsvs(csvs.filter((_, j) => j !== i))}
                 />
-              </Center>
+              </C.Center>
             ))}
-          </Flex>
+          </C.Flex>
         ) : (
-          <Text>Drop n' drop</Text>
+          <C.Text
+            fontWeight={"semibold"}
+            textAlign={"center"}
+            color={"gray.600"}
+          >
+            Drop n' drop credit card statements
+          </C.Text>
         )}
-      </Center>
-      <Button disabled={!csvs} onClick={onSubmit}>
+      </C.Center>
+      <C.Button disabled={!csvs} onClick={onSubmit}>
         Upload
-      </Button>
-    </Flex>
+      </C.Button>
+    </C.Flex>
   );
 }

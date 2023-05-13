@@ -4,25 +4,32 @@ import React, {
   useContext,
   useState,
   useEffect,
+  useCallback,
 } from "react";
 import PocketBase from "pocketbase";
-import { useAsync } from "@react-hookz/web";
+import type { Record, RecordSubscription } from "pocketbase";
+import ky from "ky";
+import { KyInstance } from "ky/distribution/types/ky";
 
 //@ts-ignore
-const PocketbaseContext = createContext<PocketBase>();
-PocketbaseContext.displayName = "PocketbaseContext";
+const PocketbaseContext = createContext<{
+  apiClient: KyInstance;
+  pbClient: PocketBase;
+}>();
 
 export function PocketbaseProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pocketbase = useMemo(
-    () => new PocketBase(process.env.POCKETBASE_URL),
-    [process.env.POCKETBASE_URL]
+  // const pbUrl = process.env.POCKETBASE_URL;
+  const pbUrl = "http://localhost:8080";
+  const [apiClient, pbClient] = useMemo(
+    () => [ky.create({ prefixUrl: pbUrl }), new PocketBase(pbUrl)],
+    [pbUrl]
   );
   return (
-    <PocketbaseContext.Provider value={pocketbase}>
+    <PocketbaseContext.Provider value={{ apiClient, pbClient }}>
       {children}
     </PocketbaseContext.Provider>
   );
@@ -32,64 +39,102 @@ export function usePocketbase() {
   return useContext(PocketbaseContext);
 }
 
-export function usePocketbaseCollection(collectionName: string, options?: any) {
-  const pb = usePocketbase();
-  return useAsync(async () => {
-    return await pb.collection(collectionName).getFullList(options);
-  }, []);
-}
+export const transactionTypes = ["coffee", "meals_out", "health", "rent"];
 
-interface IRecord {
+export type TransactionType = (typeof transactionTypes)[number];
+
+export interface ITransaction extends Record {
   id: string;
-  collectionId: string;
-  collectionName: string;
   created: string;
   updated: string;
-}
-
-interface ITransaction extends IRecord {
   description: string;
   date: string;
-  type: string[];
+  type: TransactionType[];
   amount: number;
+  notes?: string;
 }
 
-interface IRealtimeEvent<T> {
-  record?: T;
-  action: "create" | "update" | "delete";
-}
+export type ITransactionUpdate = Omit<
+  Partial<Omit<ITransaction, keyof Record>>,
+  "id"
+>;
 
-function subscribePocketbaseCollection<T extends IRecord>(
-  collectionName: string
-) {
-  const pb = usePocketbase();
-  const [records, setRecords] = useState<T[]>([]);
+function useRealtimePocketbaseCollection<T extends Record>(
+  collectionName: string,
+  collectionOrder: (a: T, b: T) => number
+): {
+  records: T[];
+  loading: boolean;
+} {
+  const { pbClient } = usePocketbase();
+  const [recordsUnsorted, setRecordsUnsorted] = useState<T[]>([]);
   const [loading, setLoading] = useState(true);
-  const collectionRef = useMemo(
-    () => pb.collection(collectionName),
-    [pb, collectionName]
-  );
+
+  // populate initial state
   useEffect(() => {
-    collectionRef.subscribe("*", (e: IRealtimeEvent<T>) => {
-      switch (e.action) {
-        case "create":
-          setRecords((r) => [...r, e.record!]);
-        case "update":
-          setRecords((r) =>
-            r.map((record) => (record.id === e.record!.id ? e.record! : record))
-          );
-        case "delete":
-          setRecords((r) => r.filter((record) => record.id !== e.record!.id));
-        default:
-          throw new Error(`Unknown action: ${e.action}`);
+    pbClient
+      .collection(collectionName)
+      .getFullList()
+      .then((c: Record[]) => setRecordsUnsorted(c as T[]));
+    setLoading(false);
+  }, [pbClient]);
+
+  // subscribe and react to changes
+  useEffect(() => {
+    const collectionRef = pbClient.collection(collectionName);
+    collectionRef.subscribe("*", (e: RecordSubscription<T>) => {
+      if (e.action === "create") {
+        setRecordsUnsorted((mostRecentRecords) => [
+          ...mostRecentRecords,
+          e.record!,
+        ]);
+      } else if (e.action === "delete") {
+        setRecordsUnsorted((mostRecentRecords) =>
+          mostRecentRecords.filter((record) => record.id !== e.record!.id)
+        );
+      } else if (e.action === "update") {
+        setRecordsUnsorted((mostRecentRecords) =>
+          mostRecentRecords.map((record) =>
+            record.id === e.record?.id ? e.record! : record
+          )
+        );
+      } else {
+        throw new Error(`Unknown action: ${e.action}`);
       }
     });
-    setLoading(false);
-    return () => collectionRef.unsubscribe();
-  }, []);
+    return () => {
+      collectionRef.unsubscribe();
+    };
+  }, [recordsUnsorted, setRecordsUnsorted]);
+
+  // re-sort to keep a consistent order
+  const records = useMemo(
+    () => [...recordsUnsorted.sort(collectionOrder)],
+    [recordsUnsorted, collectionOrder]
+  );
+
   return { records, loading };
 }
 
-export function subscribeTransactions() {
-  return subscribePocketbaseCollection<ITransaction>("transactions");
+export function useUpdate<T>(collectionName: string) {
+  const { pbClient } = usePocketbase();
+  return useCallback(
+    (id: string, payload: T) =>
+      //@ts-ignore
+      pbClient.collection(collectionName).update(id, payload),
+    [pbClient]
+  );
+}
+
+export function useTransactions() {
+  const { records: transactions, loading } =
+    useRealtimePocketbaseCollection<ITransaction>(
+      "transactions",
+      (a: ITransaction, b: ITransaction) => b.date.localeCompare(a.date)
+    );
+  return { transactions, loading };
+}
+
+export function useUpdateTransaction() {
+  return useUpdate<ITransactionUpdate>("transactions");
 }

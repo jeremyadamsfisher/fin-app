@@ -4,11 +4,6 @@ import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 
-export const metadata = {
-  title: "Next.js + TypeScript Example",
-  description: "A Next.js + TypeScript example",
-};
-
 export default function RootLayout({
   children,
 }: {
